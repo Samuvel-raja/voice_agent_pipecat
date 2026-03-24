@@ -1,0 +1,105 @@
+.App {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 24px;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica,
+    Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+.card {
+  width: 100%;
+  max-width: 520px;
+  background: #111c33;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.card h1 {
+  font-size: 22px;
+  margin: 0 0 16px;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  background: rgba(2, 6, 23, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 14px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #ef4444;
+}
+
+.dot.on {
+  background: #22c55e;
+}
+
+.buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.buttons button {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  padding: 12px 10px;
+  background: #1d4ed8;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.buttons button:nth-child(2) {
+  background: #334155;
+}
+
+.buttons button:nth-child(3) {
+  background: #0b1225;
+}
+
+.buttons button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.voice {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: rgba(2, 6, 23, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 14px;
+}
+
+.label {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.log {
+  height: 200px;
+  overflow: auto;
+  padding: 12px;
+  background: #0b1225;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 12px;
+  color: #9ca3af;
+}
