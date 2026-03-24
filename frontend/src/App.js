@@ -103,11 +103,46 @@ function App() {
   }
 
   return (
-    <div className="App">
-      <div className="card">
-        <h1>Pipecat Voice (React)</h1>
+    <div className="App meet">
+      <header className="meetHeader">
+        <div className="meetHeaderLeft">
+          <div className="meetTitle">Pipecat Voice</div>
+          <div className="meetSubtitle">React</div>
+        </div>
+        <div className="meetHeaderRight">
+          <StatusBar running={status.running} pid={status.pid} listening={speech.listening} />
+        </div>
+      </header>
 
-        <StatusBar running={status.running} pid={status.pid} listening={speech.listening} />
+      <main className="meetMain">
+        <section className="meetStage">
+          <div className="meetTile">
+            <div className="meetTileTop">
+              <div className="meetTileName">You</div>
+              <div className="meetTileBadge">{speech.listening ? "Mic on" : "Mic off"}</div>
+            </div>
+            <div className="meetTileBody">
+              <div className="meetAvatar">You</div>
+            </div>
+          </div>
+
+          <div className="meetTile">
+            <div className="meetTileTop">
+              <div className="meetTileName">AI Assistant</div>
+              <div className="meetTileBadge">{status.running ? "Connected" : "Offline"}</div>
+            </div>
+            <div className="meetTileBody meetTileBodyStack">
+              <AudioPlayer audioRef={audioRef} />
+              <div className="meetLogWrap">
+                <div className="meetLogTitle">Activity</div>
+                <LogPanel logs={logs} />
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="meetFooter">
         <Controls
           onStart={startSession}
           onStop={stopSession}
@@ -115,9 +150,7 @@ function App() {
           busy={busy}
           running={status.running}
         />
-        <AudioPlayer audioRef={audioRef} />
-        <LogPanel logs={logs} />
-      </div>
+      </footer>
     </div>
   );
 }

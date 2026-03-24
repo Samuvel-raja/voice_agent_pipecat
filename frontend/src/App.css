@@ -1,13 +1,140 @@
 .App {
   min-height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #0f172a;
+  flex-direction: column;
+  background: #0b1225;
   color: #e2e8f0;
-  padding: 24px;
+  padding: 16px;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica,
     Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+.meetHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 8px;
+}
+
+.meetHeaderLeft {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.meetTitle {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: #e5e7eb;
+}
+
+.meetSubtitle {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.meetHeaderRight {
+  min-width: 260px;
+}
+
+.meetMain {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.meetStage {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: stretch;
+  min-height: 0;
+  padding: 8px 4px 16px;
+}
+
+.meetTile {
+  position: relative;
+  border-radius: 18px;
+  background: radial-gradient(1000px 500px at 20% 10%, rgba(59, 130, 246, 0.18), transparent 55%),
+    #111827;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.meetTileTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px;
+}
+
+.meetTileName {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(229, 231, 235, 0.92);
+}
+
+.meetTileBadge {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  color: rgba(229, 231, 235, 0.85);
+}
+
+.meetTileBody {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  min-height: 0;
+}
+
+.meetTileBodyStack {
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 12px;
+  flex-direction: column;
+}
+
+.meetAvatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: rgba(229, 231, 235, 0.92);
+  background: rgba(59, 130, 246, 0.22);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.meetLogWrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.meetLogTitle {
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 0 0 8px;
+}
+
+.meetFooter {
+  padding: 10px 4px 6px;
+  display: flex;
+  justify-content: center;
 }
 
 .card {
@@ -29,11 +156,12 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 16px;
-  padding: 10px 12px;
-  background: rgba(2, 6, 23, 0.5);
+  margin-bottom: 0;
+  padding: 8px 10px;
+  background: rgba(2, 6, 23, 0.35);
   border: 1px solid rgba(148, 163, 184, 0.15);
   border-radius: 14px;
+  font-size: 12px;
 }
 
 .dot {
@@ -48,28 +176,31 @@
 }
 
 .buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 0;
 }
 
 .buttons button {
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 14px;
-  padding: 12px 10px;
-  background: #1d4ed8;
-  color: white;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 999px;
+  padding: 12px 16px;
+  background: rgba(30, 41, 59, 0.55);
+  color: rgba(229, 231, 235, 0.92);
   font-weight: 700;
   cursor: pointer;
+  backdrop-filter: blur(10px);
 }
 
 .buttons button:nth-child(2) {
-  background: #334155;
+  background: rgba(239, 68, 68, 0.85);
+  border-color: rgba(239, 68, 68, 0.35);
 }
 
 .buttons button:nth-child(3) {
-  background: #0b1225;
+  background: rgba(15, 23, 42, 0.7);
 }
 
 .buttons button:disabled {
@@ -78,11 +209,15 @@
 }
 
 .voice {
-  margin-bottom: 16px;
+  margin-bottom: 0;
   padding: 12px;
-  background: rgba(2, 6, 23, 0.5);
+  background: rgba(2, 6, 23, 0.35);
   border: 1px solid rgba(148, 163, 184, 0.15);
   border-radius: 14px;
+}
+
+.voice audio {
+  width: 100%;
 }
 
 .label {
@@ -92,14 +227,28 @@
 }
 
 .log {
-  height: 200px;
+  height: 100%;
   overflow: auto;
   padding: 12px;
-  background: #0b1225;
+  background: rgba(11, 18, 37, 0.65);
   border: 1px solid rgba(148, 163, 184, 0.15);
   border-radius: 14px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
     "Courier New", monospace;
   font-size: 12px;
   color: #9ca3af;
+}
+
+@media (max-width: 900px) {
+  .meetStage {
+    grid-template-columns: 1fr;
+  }
+
+  .meetHeaderRight {
+    min-width: auto;
+  }
+
+  .meetTile {
+    min-height: 360px;
+  }
 }
