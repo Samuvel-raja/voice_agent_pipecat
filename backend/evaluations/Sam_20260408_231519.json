@@ -1,0 +1,27 @@
+{
+  "candidate_name": "Sam",
+  "role_applied": "Unknown",
+  "interview_duration_minutes": 5,
+  "questions_asked": [
+    {
+      "question": "Could you tell me about your current role and what motivated you to apply for this position?",
+      "candidate_answer_summary": "Said currently in Genesys after developer, but provided minimal detail and did not expand further.",
+      "score": 2,
+      "category": "warmup"
+    }
+  ],
+  "overall_score": 2,
+  "recommendation": "no_hire",
+  "strengths": [
+    "Briefly identified their current company or technology area"
+  ],
+  "areas_of_concern": [
+    "Did not elaborate on current responsibilities",
+    "Did not share motivation for applying",
+    "Extremely limited engagement",
+    "Did not answer follow-up probes"
+  ],
+  "hiring_manager_summary": "Sam provided minimal information about their current role and gave no details on motivation for the new position. Follow-up attempts did not yield additional insights. Insufficient engagement and information to progress further at this stage.",
+  "next_steps": "No further interviews recommended unless candidate requests reconsideration or clarification.",
+  "evaluated_at": "2026-04-08T23:15:19.498378"
+}

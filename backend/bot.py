@@ -50,10 +50,79 @@ from pipecat.services.deepgram.stt import DeepgramSTTService
 from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 # from pipecat.transports.daily.transport import DailyParams
+from pipecat.adapters.schemas.function_schema import FunctionSchema
+from pipecat.adapters.schemas.tools_schema import ToolsSchema
+from pipecat.observers.loggers.llm_log_observer import LLMLogObserver
+from tools import submit_interview_result
+from prompts import SYSTEM_PROMPT
+
+
 
 logger.info("✅ All components loaded successfully!")
 
 load_dotenv(override=True)
+
+
+submit_interview_result_function = FunctionSchema(
+    name="submit_interview_result",
+    description="Submit the final structured interview result for this candidate.",
+    properties={
+        "candidate_name": {"type": "string"},
+        "role_applied": {"type": "string"},
+        "interview_duration_minutes": {"type": "number"},
+        "questions_asked": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "question": {"type": "string"},
+                    "candidate_answer_summary": {"type": "string"},
+                    "score": {"type": "number"},
+                    "category": {
+                        "type": "string",
+                        "enum": [
+                            "warmup",
+                            "technical",
+                            "behavioral",
+                            "problem_solving",
+                            "culture_fit",
+                        ],
+                    },
+                },
+                "required": [
+                    "question",
+                    "candidate_answer_summary",
+                    "score",
+                    "category",
+                ],
+            },
+        },
+        "scores": {"type": "object"},
+        "overall_score": {"type": "number"},
+        "recommendation": {
+            "type": "string",
+            "enum": ["strong_hire", "hire", "maybe", "no_hire"],
+        },
+        "strengths": {"type": "array", "items": {"type": "string"}},
+        "areas_of_concern": {"type": "array", "items": {"type": "string"}},
+        "hiring_manager_summary": {"type": "string"},
+        "next_steps": {"type": "string"},
+    },
+    required=[
+        "candidate_name",
+        "role_applied",
+        "interview_duration_minutes",
+        "questions_asked",
+        "scores",
+        "overall_score",
+        "recommendation",
+        "strengths",
+        "areas_of_concern",
+        "hiring_manager_summary",
+        "next_steps",
+    ],
+)
+
 
 
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
@@ -71,11 +140,24 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     llm = OpenAILLMService(
         api_key=os.getenv("OPENAI_API_KEY"),
         settings=OpenAILLMService.Settings(
-            system_instruction="You are a friendly AI assistant. Respond naturally and keep your answers conversational.",
+            system_instruction=SYSTEM_PROMPT,
         ),
     )
 
-    context = LLMContext()
+    tools = ToolsSchema(standard_tools=[submit_interview_result_function])
+
+
+    context = LLMContext(
+        tools=tools,
+    ) 
+
+    llm.register_function(
+        "submit_interview_result",
+        submit_interview_result,
+        cancel_on_interruption=False,  # usually you want this to finish even if user speaks
+        timeout_secs=60,
+    )
+    
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
         context,
         user_params=LLMUserAggregatorParams(vad_analyzer=SileroVADAnalyzer()),
@@ -98,6 +180,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         params=PipelineParams(
             enable_metrics=True,
             enable_usage_metrics=True,
+            observers=[LLMLogObserver()],
         ),
     )
 
