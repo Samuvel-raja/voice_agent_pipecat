@@ -55,6 +55,8 @@ from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.observers.loggers.llm_log_observer import LLMLogObserver
 from tools import submit_interview_result
 from prompts import SYSTEM_PROMPT
+from pipecat.services.deepgram.tts import DeepgramTTSService
+
 
 
 
@@ -130,10 +132,17 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
     stt = DeepgramSTTService(api_key=os.getenv("DEEPGRAM_API_KEY"))
 
-    tts = CartesiaTTSService(
-        api_key=os.getenv("CARTESIA_API_KEY"),
-        settings=CartesiaTTSService.Settings(
-            voice="71a7ad14-091c-4e8e-a314-022ece01c121",  # British Reading Lady
+    # tts = CartesiaTTSService(
+    #     api_key=os.getenv("CARTESIA_API_KEY"),
+    #     settings=CartesiaTTSService.Settings(
+    #         voice="71a7ad14-091c-4e8e-a314-022ece01c121",  # British Reading Lady
+    #     ),
+    # )
+
+    tts = DeepgramTTSService(
+        api_key=os.getenv("DEEPGRAM_API_KEY"),
+        settings=DeepgramTTSService.Settings(
+            voice="aura-2-andromeda-en",
         ),
     )
 

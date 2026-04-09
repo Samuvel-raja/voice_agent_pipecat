@@ -1,0 +1,76 @@
+{
+  "candidate_name": "Sam",
+  "role_applied": "Software Developer",
+  "interview_duration_minutes": 23,
+  "questions_asked": [
+    {
+      "question": "Could you tell me a little about your current role and what motivated you to apply for this position?",
+      "candidate_answer_summary": "Sam is a software developer with over six months of experience, working on building web applications for clients.",
+      "score": 4,
+      "category": "warmup"
+    },
+    {
+      "question": "Can you walk me through the main technologies or programming languages you use to build web applications in your current position?",
+      "candidate_answer_summary": "He uses JavaScript for the front end, and FastAPI and other models for the back end.",
+      "score": 5,
+      "category": "technical"
+    },
+    {
+      "question": "Can you tell me about a recent project you worked on where you built a web application? What was your specific role, and what technologies did you use?",
+      "candidate_answer_summary": "Sam is currently working on a project generating structured reports from user comments, working on both front and back end.",
+      "score": 4,
+      "category": "technical"
+    },
+    {
+      "question": "Could you give me a specific example of a technical challenge you've faced on this project and how you solved it?",
+      "candidate_answer_summary": "Faced performance issues with processing high volumes of comments, addressed using APIs and multithreading for faster data handling.",
+      "score": 5,
+      "category": "technical"
+    },
+    {
+      "question": "Tell me about a time you had to work with a team member who had a very different approach or opinion from yours. How did you handle that situation?",
+      "candidate_answer_summary": "Sam mentioned not facing conflicts or disagreements with team members, describing a collaborative workflow.",
+      "score": 3,
+      "category": "behavioral"
+    },
+    {
+      "question": "Tell me about a time when you had to quickly learn a new tool or technology for a project. How did you approach that, and what was the outcome?",
+      "candidate_answer_summary": "Recently learned a new technology (possibly an unfamiliar framework) by reading documentation and applied it to his project.",
+      "score": 5,
+      "category": "behavioral"
+    },
+    {
+      "question": "Imagine you're given a vague client request for a new web feature, but the requirements aren't clear. How would you handle the situation to make sure you deliver what the client actually wants?",
+      "candidate_answer_summary": "He would carefully understand the requirements, consider possible approaches, and choose the best solution. No specific example provided.",
+      "score": 3,
+      "category": "problem_solving"
+    },
+    {
+      "question": "How would you describe your working style? For example, do you prefer collaborating in teams, or do you like working independently?",
+      "candidate_answer_summary": "Prefers both collaborative and independent work, depending on the context.",
+      "score": 5,
+      "category": "culture_fit"
+    },
+    {
+      "question": "What do you value most in a workplace or team environment?",
+      "candidate_answer_summary": "Collaboration is the most important value in a team for Sam.",
+      "score": 5,
+      "category": "culture_fit"
+    }
+  ],
+  "overall_score": 4,
+  "recommendation": "maybe",
+  "strengths": [
+    "Experience with both front-end and back-end web development",
+    "Ability to learn and apply new technologies through documentation",
+    "Understands the value of collaboration in a team"
+  ],
+  "areas_of_concern": [
+    "Difficulty articulating specific examples and technical details",
+    "Limited evidence of complex problem-solving or handling conflict",
+    "Communication sometimes vague and lacking specifics"
+  ],
+  "hiring_manager_summary": "Sam has over six months of experience as a software developer focusing on web applications, working on both front and back end. He displays basic technical competency and the ability to learn new tools when required, typically through self-study and documentation. While collaborative and adaptable in working styles, Sam had difficulty providing detailed or specific examples, especially around problem-solving or conflict resolution. Communication was sometimes unclear and brief. Recommend further assessment, especially for technical depth and articulation of real-world examples.",
+  "next_steps": "Consider a practical technical assessment or coding test to evaluate hands-on skills and ability to articulate problem-solving approaches.",
+  "evaluated_at": "2026-04-09T22:11:55.317334"
+}

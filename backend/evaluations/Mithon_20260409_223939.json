@@ -1,0 +1,58 @@
+{
+  "candidate_name": "Mithon",
+  "role_applied": "AI Engineer",
+  "interview_duration_minutes": 28,
+  "questions_asked": [
+    {
+      "question": "Could you tell me a bit about your current role and what motivated you to apply for this position?",
+      "candidate_answer_summary": "Mithon is currently an AI engineer with three years of experience, motivated by a desire to level up his skills and believes this company provides better opportunities for growth.",
+      "score": 6,
+      "category": "warmup"
+    },
+    {
+      "question": "Can you walk me through a recent project where you developed or contributed to an AI model? What was your role, and what technologies did you use?",
+      "candidate_answer_summary": "He outlined experience with embeddings, voice models, transformers, optimization, and deployment. He mentioned products like AIQ tool, interview work, RAG applications, extraction engines, and niche solutions for law firms, highlighting hands-on work and familiarity with fine-tuning models.",
+      "score": 7,
+      "category": "technical"
+    },
+    {
+      "question": "Tell me about a time when you faced a major technical challenge on one of your projects. How did you handle it?",
+      "candidate_answer_summary": "He detailed a scenario where he drastically improved a PDF data extraction system's latency and accuracy by implementing a staged, parallelized data extraction pipeline, increasing speed and accuracy significantly.",
+      "score": 8,
+      "category": "technical"
+    },
+    {
+      "question": "Tell me about a time when you had to collaborate with a team member who had a different viewpoint than yours. How did you handle it?",
+      "candidate_answer_summary": "Mithon described managing teams across multiple projects, favoring collaboration by gathering all opinions and creating a collective solution rather than imposing his own viewpoint.",
+      "score": 7,
+      "category": "behavioral"
+    },
+    {
+      "question": "Imagine you need to deploy a new AI system with legacy infrastructure. How do you ensure smooth integration?",
+      "candidate_answer_summary": "He suggested building a new service or module parallel to the legacy system to avoid disruption, advocating for new architecture and gradual integration without touching existing systems unless necessary.",
+      "score": 6,
+      "category": "problem_solving"
+    },
+    {
+      "question": "How do you prioritize your tasks when you have competing deadlines?",
+      "candidate_answer_summary": "He explained splitting tasks into hard, medium, and low, handling easy ones first for momentum, then tackling harder tasks to clear potential blockers, and analyzing for interrelated tasks for more efficient handling.",
+      "score": 6,
+      "category": "culture_fit"
+    }
+  ],
+  "overall_score": 6,
+  "recommendation": "maybe",
+  "strengths": [
+    "Hands-on experience with modern AI models and deployment.",
+    "Demonstrated ability to optimize processes for speed and accuracy.",
+    "Collaborative approach in team environments."
+  ],
+  "areas_of_concern": [
+    "Communication is sometimes unclear and disorganized.",
+    "Answers at times lacked specificity and structure.",
+    "Needs to clarify his approach on complex integration scenarios."
+  ],
+  "hiring_manager_summary": "Mithon shows practical AI engineering experience, particularly with embeddings, transformers, and pipeline optimization for real-world use cases. He described successful improvements in processing time and accuracy. His answers show initiative and collaboration but often lacked clarity and structured thought. Communication skills may require improvement, especially in articulating complex processes or architectural decisions. Mithon could be a viable candidate at the 'maybe' stage\u2014consider a follow-up interview with more targeted technical and communicative assessments.",
+  "next_steps": "Recommend a follow-up technical interview focused on system integration and communication skills.",
+  "evaluated_at": "2026-04-09T22:39:39.274568"
+}
