@@ -56,6 +56,9 @@ from pipecat.observers.loggers.llm_log_observer import LLMLogObserver
 from tools import submit_interview_result
 from prompts import SYSTEM_PROMPT
 from pipecat.services.deepgram.tts import DeepgramTTSService
+from common import Common
+
+common = Common()
 
 
 
@@ -146,10 +149,47 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         ),
     )
 
+    AI_CONTEXT = await common.generate_prompt({
+            "job_title": "Senior Backend Engineer",
+            "company": "Finmo",
+            "industry": "Fintech / Payments Infrastructure",
+            "seniority": "Senior (5–8 years)",
+            "duration": "45 minutes",
+            "focus_areas": [
+                "Distributed systems",
+                "API design",
+                "Payment processing pipelines",
+                "Observability"
+            ],
+            "tech_skills": [
+                "Python",
+                "Go",
+                "Kafka",
+                "PostgreSQL",
+                "Redis",
+                "REST/gRPC APIs",
+                "Docker/Kubernetes"
+            ],
+            "jd_summary": "Finmo is building real-time cross-border payment rails for Southeast Asia. The role owns the design and reliability of core transaction processing microservices, collaborates with product and compliance teams, and leads incident response for production issues.",
+            "candidate_name": "Priya Nair",
+            "followup_timeline": "within 3–5 business days",
+            "custom_guardrails": [
+                "Do not ask about availability or notice period.",
+                "Do not discuss the company's Series B funding or investor details."
+            ],
+            "resume_flags": [
+                "18-month gap between 2021–2022 listed as 'freelance consulting' with no clients named.",
+                "Promoted twice in 18 months at previous employer — worth probing what drove the fast progression."
+            ]
+            }
+        )
+
+    FINAL_SYSTEM_PROMPT = SYSTEM_PROMPT.format(AI_CONTEXT=AI_CONTEXT)
+
     llm = OpenAILLMService(
         api_key=os.getenv("OPENAI_API_KEY"),
         settings=OpenAILLMService.Settings(
-            system_instruction=SYSTEM_PROMPT,
+            system_instruction=FINAL_SYSTEM_PROMPT,
         ),
     )
 
