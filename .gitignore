@@ -12,6 +12,7 @@ build/
 develop-eggs/
 dist/
 downloads/
+evaluations/
 eggs/
 .eggs/
 lib/
@@ -193,6 +194,7 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
 
 # Marimo
 marimo/_static/
