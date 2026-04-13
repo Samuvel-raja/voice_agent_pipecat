@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import "./App.css";
 
-import { connectBot, disconnectBot, getStatus } from "./api/botApi";
+import { connectBotWithQuestions, disconnectBot, getStatus } from "./api/botApi";
 import { createWebRTCConnection } from "./services/webrtc/createWebRTCConnection";
 import { Controls } from "./components/Controls";
 import { StatusBar } from "./components/StatusBar";
@@ -34,7 +34,15 @@ function App() {
     setBusy(true);
     addLog("Requesting session from server...");
     try {
-      const data = await connectBot();
+      const data = await connectBotWithQuestions({
+        candidate_name: "Candidate",
+        questions: [
+          "Tell me about yourself and what you're currently working on.",
+          "Describe a production incident you handled end-to-end.",
+          "How do you design idempotency for payment APIs?",
+          "How do you approach performance bottlenecks in a distributed system?",
+        ],
+      });
 
       addLog(
         data.already_running
