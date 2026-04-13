@@ -4,6 +4,7 @@ import threading
 import json
 import urllib.request
 import urllib.error
+import time
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
@@ -18,6 +19,7 @@ app = FastAPI()
 SERVER_PORT = 7870
 
 BOT_HTTP_BASE = "http://localhost:7860"
+BOT_CONFIG_HTTP_BASE = "http://127.0.0.1:7861"
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,6 +31,11 @@ app.add_middleware(
 
 class SessionConfig(BaseModel):
     pass
+
+
+class QuestionsSessionConfig(BaseModel):
+    candidate_name: str
+    questions: list[str]
 
 
 _bot_lock = threading.Lock()
@@ -59,6 +66,42 @@ def _proxy_json(method: str, url: str, payload: dict):
         logger.exception(f"Proxy error {method} {url}: {e}")
         raise HTTPException(status_code=502, detail=str(e))
 
+
+def _wait_for_http_ok(url: str, timeout_secs: float = 10.0) -> bool:
+    deadline = time.time() + timeout_secs
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(url, timeout=1) as resp:
+                if 200 <= resp.status < 300:
+                    return True
+        except Exception:
+            time.sleep(0.2)
+    return False
+
+
+def _push_session_config(candidate_name: str, questions: list[str]) -> None:
+    if not _wait_for_http_ok(f"{BOT_CONFIG_HTTP_BASE}/health", timeout_secs=10.0):
+        raise HTTPException(status_code=502, detail="Bot config server not ready on port 7861")
+
+    _proxy_json(
+        "POST",
+        f"{BOT_CONFIG_HTTP_BASE}/session-config",
+        {"candidate_name": candidate_name, "questions": questions},
+    )
+
+
+def _start_bot(env_overrides: Optional[dict] = None) -> subprocess.Popen:
+    creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+    env = os.environ.copy()
+    if env_overrides:
+        env.update(env_overrides)
+    return subprocess.Popen(
+        ["uv", "run", "bot.py", "--transport", "webrtc"],
+        env=env,
+        creationflags=creationflags,
+        cwd=os.path.dirname(os.path.abspath(__file__)),
+    )
+
 @app.post("/webrtc/offer")
 async def webrtc_offer(request: Request):
     payload = await request.json()
@@ -83,16 +126,7 @@ async def connect(config: Optional[SessionConfig] = None):
                     "pid": _bot_process.pid,
                 }
 
-            # Start bot.py as a subprocess using WebRTC transport.
-            # Use 'uv run' to ensure it uses the correct environment.
-            # We pass --transport webrtc because Daily is not available on Windows.
-            creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
-            _bot_process = subprocess.Popen(
-                ["uv", "run", "bot.py", "--transport", "webrtc"],
-                env=os.environ.copy(),
-                creationflags=creationflags,
-                cwd=os.path.dirname(os.path.abspath(__file__))
-            )
+            _bot_process = _start_bot({"PROMPT_MODE": "job"})
 
         return {
             "status": "ok",
@@ -105,6 +139,29 @@ async def connect(config: Optional[SessionConfig] = None):
         }
     except Exception as e:
         logger.exception(f"Error starting bot: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/connect/questions")
+async def connect_questions(config: QuestionsSessionConfig):
+    try:
+        global _bot_process
+        with _bot_lock:
+            already_running = _is_running(_bot_process)
+            if not already_running:
+                _bot_process = _start_bot({"PROMPT_MODE": "job"})
+
+        _push_session_config(config.candidate_name, config.questions)
+
+        return {
+            "status": "ok",
+            "transport": "webrtc",
+            "already_running": already_running,
+            "pid": _bot_process.pid if _bot_process else None,
+            "config": {"webrtc_config": {}},
+        }
+    except Exception as e:
+        logger.exception(f"Error starting bot (questions mode): {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

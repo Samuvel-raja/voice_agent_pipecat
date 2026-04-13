@@ -20,6 +20,9 @@ Run the bot using::
 """
 
 import os
+import json
+import threading
+from typing import Any
 
 from dotenv import load_dotenv
 from loguru import logger
@@ -59,6 +62,65 @@ from pipecat.services.deepgram.tts import DeepgramTTSService
 from common import Common
 
 common = Common()
+
+_session_config_lock = threading.Lock()
+_session_config: dict[str, Any] = {}
+
+
+def _set_session_config(candidate_name: str, questions: list[str]) -> None:
+    with _session_config_lock:
+        _session_config["candidate_name"] = candidate_name
+        _session_config["questions"] = questions
+
+
+def _get_session_config() -> tuple[str, list[str]]:
+    with _session_config_lock:
+        candidate_name = _session_config.get("candidate_name")
+        questions = _session_config.get("questions")
+
+    if isinstance(candidate_name, str) and isinstance(questions, list):
+        return candidate_name, [str(q) for q in questions]
+
+    candidate_name_env = os.getenv("CANDIDATE_NAME", "Candidate")
+    questions_raw = os.getenv("INTERVIEW_QUESTIONS", "[]")
+    try:
+        questions_env = json.loads(questions_raw)
+        if not isinstance(questions_env, list):
+            questions_env = []
+    except Exception:
+        questions_env = []
+
+    return candidate_name_env, [str(q) for q in questions_env]
+
+
+def _start_config_server() -> None:
+    try:
+        from fastapi import FastAPI
+        from pydantic import BaseModel
+        import uvicorn
+
+        app = FastAPI()
+
+        class SessionConfigPayload(BaseModel):
+            candidate_name: str
+            questions: list[str]
+
+        @app.get("/health")
+        async def health():
+            return {"ok": True}
+
+        @app.post("/session-config")
+        async def set_session_config(payload: SessionConfigPayload):
+            _set_session_config(payload.candidate_name, payload.questions)
+            return {"ok": True}
+
+        uvicorn.run(app, host="127.0.0.1", port=7861, log_level="warning")
+    except Exception as e:
+        logger.exception(f"Failed to start config server: {e}")
+
+
+_config_server_thread = threading.Thread(target=_start_config_server, daemon=True)
+_config_server_thread.start()
 
 
 
@@ -149,40 +211,44 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         ),
     )
 
-    AI_CONTEXT = await common.generate_prompt({
-            "job_title": "Senior Backend Engineer",
-            "company": "Finmo",
-            "industry": "Fintech / Payments Infrastructure",
-            "seniority": "Senior (5–8 years)",
-            "duration": "45 minutes",
-            "focus_areas": [
-                "Distributed systems",
-                "API design",
-                "Payment processing pipelines",
-                "Observability"
-            ],
-            "tech_skills": [
-                "Python",
-                "Go",
-                "Kafka",
-                "PostgreSQL",
-                "Redis",
-                "REST/gRPC APIs",
-                "Docker/Kubernetes"
-            ],
-            "jd_summary": "Finmo is building real-time cross-border payment rails for Southeast Asia. The role owns the design and reliability of core transaction processing microservices, collaborates with product and compliance teams, and leads incident response for production issues.",
-            "candidate_name": "Priya Nair",
-            "followup_timeline": "within 3–5 business days",
-            "custom_guardrails": [
-                "Do not ask about availability or notice period.",
-                "Do not discuss the company's Series B funding or investor details."
-            ],
-            "resume_flags": [
-                "18-month gap between 2021–2022 listed as 'freelance consulting' with no clients named.",
-                "Promoted twice in 18 months at previous employer — worth probing what drove the fast progression."
-            ]
-            }
-        )
+    candidate_name, questions = _get_session_config()
+    if questions:
+        AI_CONTEXT = await common.generate_prompt_with_questions(candidate_name, questions)
+    else:
+        AI_CONTEXT = await common.generate_prompt({
+                "job_title": "Senior Backend Engineer",
+                "company": "Finmo",
+                "industry": "Fintech / Payments Infrastructure",
+                "seniority": "Senior (5–8 years)",
+                "duration": "45 minutes",
+                "focus_areas": [
+                    "Distributed systems",
+                    "API design",
+                    "Payment processing pipelines",
+                    "Observability"
+                ],
+                "tech_skills": [
+                    "Python",
+                    "Go",
+                    "Kafka",
+                    "PostgreSQL",
+                    "Redis",
+                    "REST/gRPC APIs",
+                    "Docker/Kubernetes"
+                ],
+                "jd_summary": "Finmo is building real-time cross-border payment rails for Southeast Asia. The role owns the design and reliability of core transaction processing microservices, collaborates with product and compliance teams, and leads incident response for production issues.",
+                "candidate_name": "Priya Nair",
+                "followup_timeline": "within 3–5 business days",
+                "custom_guardrails": [
+                    "Do not ask about availability or notice period.",
+                    "Do not discuss the company's Series B funding or investor details."
+                ],
+                "resume_flags": [
+                    "18-month gap between 2021–2022 listed as 'freelance consulting' with no clients named.",
+                    "Promoted twice in 18 months at previous employer — worth probing what drove the fast progression."
+                ]
+                }
+            )
 
     FINAL_SYSTEM_PROMPT = SYSTEM_PROMPT.format(AI_CONTEXT=AI_CONTEXT)
 

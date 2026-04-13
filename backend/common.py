@@ -1,6 +1,7 @@
 from langchain_openai import OpenAI
 import os
-from prompts import AI_INTERVIEWER_PROMPT
+import json
+from prompts import AI_INTERVIEWER_PROMPT, AI_INTERVIEWR_WITH_QUESTIONS
 from dotenv import load_dotenv
 import logging
 
@@ -14,5 +15,14 @@ class Common:
     async def generate_prompt(self, job_details):
         job_data = AI_INTERVIEWER_PROMPT.format(**job_details)
         response = await self.llm.ainvoke(job_data)
+        print("REs", response)
+        return response
+
+    async def generate_prompt_with_questions(self, candidate_name: str, questions: list[str]):
+        prompt = AI_INTERVIEWR_WITH_QUESTIONS.format(
+            candidate_name=candidate_name,
+            questions=json.dumps(questions, ensure_ascii=False),
+        )
+        response = await self.llm.ainvoke(prompt)
         print("REs", response)
         return response
