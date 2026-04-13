@@ -27,41 +27,6 @@ from typing import Any
 from dotenv import load_dotenv
 from loguru import logger
 
-print("🚀 Starting Pipecat bot...")
-print("⏳ Loading models and imports (20 seconds, first run only)\n")
-
-logger.info("Loading Silero VAD model...")
-from pipecat.audio.vad.silero import SileroVADAnalyzer
-
-logger.info("✅ Silero VAD model loaded")
-
-from pipecat.frames.frames import LLMRunFrame
-
-logger.info("Loading pipeline components...")
-from pipecat.pipeline.pipeline import Pipeline
-from pipecat.pipeline.runner import PipelineRunner
-from pipecat.pipeline.task import PipelineParams, PipelineTask
-from pipecat.processors.aggregators.llm_context import LLMContext
-from pipecat.processors.aggregators.llm_response_universal import (
-    LLMContextAggregatorPair,
-    LLMUserAggregatorParams,
-)
-from pipecat.runner.types import RunnerArguments
-from pipecat.runner.utils import create_transport
-from pipecat.services.cartesia.tts import CartesiaTTSService
-from pipecat.services.deepgram.stt import DeepgramSTTService
-from pipecat.services.openai.llm import OpenAILLMService
-from pipecat.transports.base_transport import BaseTransport, TransportParams
-# from pipecat.transports.daily.transport import DailyParams
-from pipecat.adapters.schemas.function_schema import FunctionSchema
-from pipecat.adapters.schemas.tools_schema import ToolsSchema
-from pipecat.observers.loggers.llm_log_observer import LLMLogObserver
-from tools import submit_interview_result
-from prompts import SYSTEM_PROMPT
-from pipecat.services.deepgram.tts import DeepgramTTSService
-from common import Common
-
-common = Common()
 
 _session_config_lock = threading.Lock()
 _session_config: dict[str, Any] = {}
@@ -121,6 +86,43 @@ def _start_config_server() -> None:
 
 _config_server_thread = threading.Thread(target=_start_config_server, daemon=True)
 _config_server_thread.start()
+
+print("🚀 Starting Pipecat bot...")
+print("⏳ Loading models and imports (20 seconds, first run only)\n")
+
+logger.info("Loading Silero VAD model...")
+from pipecat.audio.vad.silero import SileroVADAnalyzer
+
+logger.info("✅ Silero VAD model loaded")
+
+from pipecat.frames.frames import LLMRunFrame
+
+logger.info("Loading pipeline components...")
+from pipecat.pipeline.pipeline import Pipeline
+from pipecat.pipeline.runner import PipelineRunner
+from pipecat.pipeline.task import PipelineParams, PipelineTask
+from pipecat.processors.aggregators.llm_context import LLMContext
+from pipecat.processors.aggregators.llm_response_universal import (
+    LLMContextAggregatorPair,
+    LLMUserAggregatorParams,
+)
+from pipecat.runner.types import RunnerArguments
+from pipecat.runner.utils import create_transport
+from pipecat.services.cartesia.tts import CartesiaTTSService
+from pipecat.services.deepgram.stt import DeepgramSTTService
+from pipecat.services.openai.llm import OpenAILLMService
+from pipecat.services.azure.llm import AzureLLMService
+from pipecat.transports.base_transport import BaseTransport, TransportParams
+# from pipecat.transports.daily.transport import DailyParams
+from pipecat.adapters.schemas.function_schema import FunctionSchema
+from pipecat.adapters.schemas.tools_schema import ToolsSchema
+from pipecat.observers.loggers.llm_log_observer import LLMLogObserver
+from tools import submit_interview_result
+from prompts import SYSTEM_PROMPT
+from pipecat.services.deepgram.tts import DeepgramTTSService
+from common import Common
+
+common = Common()
 
 
 
@@ -252,9 +254,22 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
     FINAL_SYSTEM_PROMPT = SYSTEM_PROMPT.format(AI_CONTEXT=AI_CONTEXT)
 
-    llm = OpenAILLMService(
-        api_key=os.getenv("OPENAI_API_KEY"),
-        settings=OpenAILLMService.Settings(
+    # llm = OpenAILLMService(
+    #     api_key=os.getenv("OPENAI_API_KEY"),
+    #     settings=OpenAILLMService.Settings(
+    #         system_instruction=FINAL_SYSTEM_PROMPT,
+    #     ),
+    # )
+    azure_api_key = os.getenv("AZURE_OPENAI_API_KEY_GPT_5")
+    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT_GPT_5")
+    deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT_GPT_5")
+    deployed_version = os.getenv("AZURE_OPENAI_API_VERSION_GPT_5")
+
+    llm = AzureLLMService(
+        api_key=azure_api_key,
+        endpoint=endpoint,
+        settings=AzureLLMService.Settings(
+            model=deployment,
             system_instruction=FINAL_SYSTEM_PROMPT,
         ),
     )

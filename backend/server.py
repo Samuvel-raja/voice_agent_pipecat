@@ -80,7 +80,7 @@ def _wait_for_http_ok(url: str, timeout_secs: float = 10.0) -> bool:
 
 
 def _push_session_config(candidate_name: str, questions: list[str]) -> None:
-    if not _wait_for_http_ok(f"{BOT_CONFIG_HTTP_BASE}/health", timeout_secs=10.0):
+    if not _wait_for_http_ok(f"{BOT_CONFIG_HTTP_BASE}/health", timeout_secs=30.0):
         raise HTTPException(status_code=502, detail="Bot config server not ready on port 7861")
 
     _proxy_json(
