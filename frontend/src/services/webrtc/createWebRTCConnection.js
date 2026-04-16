@@ -1,6 +1,6 @@
 import { sendIceCandidates, sendOffer } from "../../api/webrtcApi";
 
-export async function createWebRTCConnection({ onLog, onError, onRemoteStream }) {
+export async function createWebRTCConnection({ onLog, onError, onRemoteStream, sessionId }) {
   let pc = null;
   let localStream = null;
   let pcId = null;
@@ -15,7 +15,7 @@ export async function createWebRTCConnection({ onLog, onError, onRemoteStream })
     const candidates = pendingCandidates;
     pendingCandidates = [];
 
-    await sendIceCandidates({ pc_id: pcId, candidates });
+    await sendIceCandidates({ pc_id: pcId, candidates }, sessionId);
   }
 
   function scheduleFlushCandidates() {
@@ -69,7 +69,7 @@ export async function createWebRTCConnection({ onLog, onError, onRemoteStream })
       pc_id: null,
       restart_pc: null,
       request_data: null,
-    });
+    }, sessionId);
 
     pcId = answer?.pc_id || answer?.pcId || pcId;
 

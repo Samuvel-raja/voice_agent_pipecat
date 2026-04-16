@@ -1,35 +1,34 @@
-#
-# Copyright (c) 2024-2026, Daily
-#
-# SPDX-License-Identifier: BSD 2-Clause License
-#
-
-"""Pipecat Quickstart Example.
-
-The example runs a simple voice AI bot that you can connect to using your
-browser and speak with it. You can also deploy this bot to Pipecat Cloud.
-
-Required AI services:
-- Deepgram (Speech-to-Text)
-- OpenAI (LLM)
-- Cartesia (Text-to-Speech)
-
-Run the bot using::
-
-    uv run bot.py
-"""
-
-import os
 import json
+import os
+import sys
 import threading
 from typing import Any
+import urllib.request
+import urllib.error
 
 from dotenv import load_dotenv
 from loguru import logger
 
+load_dotenv(override=True)
+
+# ---------------------------------------------------------------------------
+# Session config
+# ---------------------------------------------------------------------------
 
 _session_config_lock = threading.Lock()
 _session_config: dict[str, Any] = {}
+
+
+def _load_env_session_config() -> None:
+    raw = os.getenv("SESSION_CONFIG_JSON")
+    if not raw:
+        return
+    try:
+        payload = json.loads(raw)
+        if isinstance(payload, dict) and payload.get("mode") and payload.get("candidate"):
+            _set_full_session_config(payload)
+    except Exception:
+        pass
 
 
 def _set_session_config(candidate_name: str, questions: list[str]) -> None:
@@ -38,66 +37,93 @@ def _set_session_config(candidate_name: str, questions: list[str]) -> None:
         _session_config["questions"] = questions
 
 
+def _set_full_session_config(payload: dict[str, Any]) -> None:
+    with _session_config_lock:
+        _session_config.clear()
+        _session_config.update(payload)
+
+
 def _get_session_config() -> tuple[str, list[str]]:
     with _session_config_lock:
-        candidate_name = _session_config.get("candidate_name")
+        name = _session_config.get("candidate_name")
         questions = _session_config.get("questions")
+    if isinstance(name, str) and isinstance(questions, list):
+        return name, [str(q) for q in questions]
+    return os.getenv("CANDIDATE_NAME", "Candidate"), []
 
-    if isinstance(candidate_name, str) and isinstance(questions, list):
-        return candidate_name, [str(q) for q in questions]
 
-    candidate_name_env = os.getenv("CANDIDATE_NAME", "Candidate")
-    questions_raw = os.getenv("INTERVIEW_QUESTIONS", "[]")
-    try:
-        questions_env = json.loads(questions_raw)
-        if not isinstance(questions_env, list):
-            questions_env = []
-    except Exception:
-        questions_env = []
-
-    return candidate_name_env, [str(q) for q in questions_env]
-
+# ---------------------------------------------------------------------------
+# Config server
+# ---------------------------------------------------------------------------
 
 def _start_config_server() -> None:
     try:
-        from fastapi import FastAPI
-        from pydantic import BaseModel
         import uvicorn
+        from fastapi import FastAPI, HTTPException
+        from pydantic import BaseModel
 
-        app = FastAPI()
+        config_app = FastAPI()
 
         class SessionConfigPayload(BaseModel):
-            candidate_name: str
-            questions: list[str]
+            candidate_name: str | None = None
+            questions: list[str] | None = None
+            mode: str | None = None
+            candidate: dict[str, Any] | None = None
+            company: dict[str, Any] | None = None
+            metadata: dict[str, Any] | None = None
 
-        @app.get("/health")
+        class UserMessagePayload(BaseModel):
+            text: str
+
+        @config_app.get("/health")
         async def health():
             return {"ok": True}
 
-        @app.post("/session-config")
-        async def set_session_config(payload: SessionConfigPayload):
-            _set_session_config(payload.candidate_name, payload.questions)
+        @config_app.post("/user-message")
+        async def user_message(payload: UserMessagePayload):
+            text = (payload.text or "").strip()
+            if not text:
+                raise HTTPException(status_code=400, detail="text is required")
+
+            with _active_task_lock:
+                task = _active_task
+                context = _active_context
+            if task is None or context is None:
+                raise HTTPException(status_code=409, detail="bot pipeline not ready")
+
+            context.add_message({"role": "user", "content": text})
+            await task.queue_frames([LLMRunFrame()])
             return {"ok": True}
 
-        uvicorn.run(app, host="127.0.0.1", port=7861, log_level="warning")
-    except Exception as e:
-        logger.exception(f"Failed to start config server: {e}")
+        @config_app.post("/session-config")
+        async def set_session_config(payload: SessionConfigPayload):
+            raw = payload.model_dump(exclude_none=True)
+            if raw.get("mode") and raw.get("candidate"):
+                _set_full_session_config(raw)
+            else:
+                _set_session_config(payload.candidate_name or "Candidate", payload.questions or [])
+            return {"ok": True}
+
+        config_port = int(os.getenv("BOT_CONFIG_PORT", "7861"))
+        uvicorn.run(config_app, host="127.0.0.1", port=config_port, log_level="warning")
+    except Exception:
+        logger.exception("Failed to start config server")
 
 
-_config_server_thread = threading.Thread(target=_start_config_server, daemon=True)
-_config_server_thread.start()
+threading.Thread(target=_start_config_server, daemon=True).start()
 
-print("🚀 Starting Pipecat bot...")
-print("⏳ Loading models and imports (20 seconds, first run only)\n")
+# ---------------------------------------------------------------------------
+# Pipeline imports
+# ---------------------------------------------------------------------------
 
 logger.info("Loading Silero VAD model...")
 from pipecat.audio.vad.silero import SileroVADAnalyzer
-
-logger.info("✅ Silero VAD model loaded")
-
-from pipecat.frames.frames import LLMRunFrame
+logger.info("Silero VAD model loaded")
 
 logger.info("Loading pipeline components...")
+from pipecat.adapters.schemas.tools_schema import ToolsSchema
+from pipecat.frames.frames import LLMRunFrame
+from pipecat.observers.loggers.llm_log_observer import LLMLogObserver
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
@@ -108,202 +134,164 @@ from pipecat.processors.aggregators.llm_response_universal import (
 )
 from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
-from pipecat.services.cartesia.tts import CartesiaTTSService
-from pipecat.services.deepgram.stt import DeepgramSTTService
-from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.services.azure.llm import AzureLLMService
-from pipecat.transports.base_transport import BaseTransport, TransportParams
-# from pipecat.transports.daily.transport import DailyParams
-from pipecat.adapters.schemas.function_schema import FunctionSchema
-from pipecat.adapters.schemas.tools_schema import ToolsSchema
-from pipecat.observers.loggers.llm_log_observer import LLMLogObserver
-from tools import submit_interview_result
-from prompts import SYSTEM_PROMPT
+from pipecat.services.deepgram.stt import DeepgramSTTService
 from pipecat.services.deepgram.tts import DeepgramTTSService
-from common import Common
+from pipecat.transports.base_transport import BaseTransport, TransportParams
 
-common = Common()
-
-
-
-
-logger.info("✅ All components loaded successfully!")
-
-load_dotenv(override=True)
-
-
-submit_interview_result_function = FunctionSchema(
-    name="submit_interview_result",
-    description="Submit the final structured interview result for this candidate.",
-    properties={
-        "candidate_name": {"type": "string"},
-        "role_applied": {"type": "string"},
-        "interview_duration_minutes": {"type": "number"},
-        "questions_asked": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "question": {"type": "string"},
-                    "candidate_answer_summary": {"type": "string"},
-                    "score": {"type": "number"},
-                    "category": {
-                        "type": "string",
-                        "enum": [
-                            "warmup",
-                            "technical",
-                            "behavioral",
-                            "problem_solving",
-                            "culture_fit",
-                        ],
-                    },
-                },
-                "required": [
-                    "question",
-                    "candidate_answer_summary",
-                    "score",
-                    "category",
-                ],
-            },
-        },
-        "scores": {"type": "object"},
-        "overall_score": {"type": "number"},
-        "recommendation": {
-            "type": "string",
-            "enum": ["strong_hire", "hire", "maybe", "no_hire"],
-        },
-        "strengths": {"type": "array", "items": {"type": "string"}},
-        "areas_of_concern": {"type": "array", "items": {"type": "string"}},
-        "hiring_manager_summary": {"type": "string"},
-        "next_steps": {"type": "string"},
-    },
-    required=[
-        "candidate_name",
-        "role_applied",
-        "interview_duration_minutes",
-        "questions_asked",
-        "scores",
-        "overall_score",
-        "recommendation",
-        "strengths",
-        "areas_of_concern",
-        "hiring_manager_summary",
-        "next_steps",
-    ],
+from models import InterviewSessionConfig
+from prompts import (
+    SESSION_START_MESSAGE,
+    SUBMIT_INTERVIEW_RESULT_SCHEMA,
+    PUBLISH_TEACHING_SNIPPET_SCHEMA,
+    TTS_VOICE,
+    build_ai_context,
+    build_system_prompt,
 )
+from utils import ContextGenerator, submit_interview_result
+
+logger.info("All components loaded")
+
+_load_env_session_config()
+_context_generator = ContextGenerator()
+
+_active_task_lock = threading.Lock()
+_active_task: PipelineTask | None = None
+_active_context: LLMContext | None = None
 
 
+# ---------------------------------------------------------------------------
+# Tool handler
+# ---------------------------------------------------------------------------
+
+async def _submit_tool_handler(params):
+    """Inject interview_mode from session config if the LLM omitted it."""
+    args = params.arguments
+    if isinstance(args, dict) and not args.get("interview_mode"):
+        with _session_config_lock:
+            mode = _session_config.get("mode")
+        if mode:
+            args["interview_mode"] = mode
+    return await submit_interview_result(params)
+
+
+def _post_json(url: str, payload: dict) -> None:
+    data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data,
+        method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        resp.read()
+
+
+async def _publish_teaching_snippet_handler(params):
+    args = params.arguments if isinstance(params.arguments, dict) else {}
+
+    session_id = os.getenv("BOT_SESSION_ID")
+    server_base = os.getenv("BOT_SERVER_BASE")
+    if not session_id or not server_base:
+        await params.result_callback({"ok": False})
+        return
+
+    payload = {
+        "title": args.get("title"),
+        "language": args.get("language"),
+        "code": args.get("code"),
+        "explanation": args.get("explanation"),
+        "step": args.get("step"),
+        "kind": args.get("kind"),
+    }
+
+    try:
+        _post_json(f"{server_base}/teaching/publish?session_id={session_id}", payload)
+        await params.result_callback({"ok": True})
+    except Exception:
+        await params.result_callback({"ok": False})
+
+
+# ---------------------------------------------------------------------------
+# Bot pipeline
+# ---------------------------------------------------------------------------
 
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
-    logger.info(f"Starting bot")
+    logger.info("Building bot pipeline")
+
+    with _session_config_lock:
+        raw_cfg = dict(_session_config)
+
+    ai_context: str | None = None
+    if raw_cfg.get("mode") and raw_cfg.get("candidate"):
+        try:
+            cfg = InterviewSessionConfig.model_validate(raw_cfg)
+            ai_context = build_ai_context(cfg)
+        except Exception:
+            logger.exception("Failed to build AI_CONTEXT from session config")
+
+    if not ai_context:
+        candidate_name, questions = _get_session_config()
+        if questions:
+            ai_context = await _context_generator.from_questions(candidate_name, questions)
+        else:
+            ai_context = await _context_generator.from_job_details({})
+
+    system_prompt = build_system_prompt(raw_cfg.get("mode"), ai_context)
 
     stt = DeepgramSTTService(api_key=os.getenv("DEEPGRAM_API_KEY"))
 
-    # tts = CartesiaTTSService(
-    #     api_key=os.getenv("CARTESIA_API_KEY"),
-    #     settings=CartesiaTTSService.Settings(
-    #         voice="71a7ad14-091c-4e8e-a314-022ece01c121",  # British Reading Lady
-    #     ),
-    # )
-
     tts = DeepgramTTSService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
-        settings=DeepgramTTSService.Settings(
-            voice="aura-2-andromeda-en",
-        ),
+        settings=DeepgramTTSService.Settings(voice=TTS_VOICE),
     )
-
-    candidate_name, questions = _get_session_config()
-    if questions:
-        AI_CONTEXT = await common.generate_prompt_with_questions(candidate_name, questions)
-    else:
-        AI_CONTEXT = await common.generate_prompt({
-                "job_title": "Senior Backend Engineer",
-                "company": "Finmo",
-                "industry": "Fintech / Payments Infrastructure",
-                "seniority": "Senior (5–8 years)",
-                "duration": "45 minutes",
-                "focus_areas": [
-                    "Distributed systems",
-                    "API design",
-                    "Payment processing pipelines",
-                    "Observability"
-                ],
-                "tech_skills": [
-                    "Python",
-                    "Go",
-                    "Kafka",
-                    "PostgreSQL",
-                    "Redis",
-                    "REST/gRPC APIs",
-                    "Docker/Kubernetes"
-                ],
-                "jd_summary": "Finmo is building real-time cross-border payment rails for Southeast Asia. The role owns the design and reliability of core transaction processing microservices, collaborates with product and compliance teams, and leads incident response for production issues.",
-                "candidate_name": "Priya Nair",
-                "followup_timeline": "within 3–5 business days",
-                "custom_guardrails": [
-                    "Do not ask about availability or notice period.",
-                    "Do not discuss the company's Series B funding or investor details."
-                ],
-                "resume_flags": [
-                    "18-month gap between 2021–2022 listed as 'freelance consulting' with no clients named.",
-                    "Promoted twice in 18 months at previous employer — worth probing what drove the fast progression."
-                ]
-                }
-            )
-
-    FINAL_SYSTEM_PROMPT = SYSTEM_PROMPT.format(AI_CONTEXT=AI_CONTEXT)
-
-    # llm = OpenAILLMService(
-    #     api_key=os.getenv("OPENAI_API_KEY"),
-    #     settings=OpenAILLMService.Settings(
-    #         system_instruction=FINAL_SYSTEM_PROMPT,
-    #     ),
-    # )
-    azure_api_key = os.getenv("AZURE_OPENAI_API_KEY_GPT_5")
-    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT_GPT_5")
-    deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT_GPT_5")
-    deployed_version = os.getenv("AZURE_OPENAI_API_VERSION_GPT_5")
 
     llm = AzureLLMService(
-        api_key=azure_api_key,
-        endpoint=endpoint,
+        api_key=os.getenv("AZURE_OPENAI_API_KEY_GPT_5"),
+        endpoint=os.getenv("AZURE_OPENAI_ENDPOINT_GPT_5"),
         settings=AzureLLMService.Settings(
-            model=deployment,
-            system_instruction=FINAL_SYSTEM_PROMPT,
+            model=os.getenv("AZURE_OPENAI_DEPLOYMENT_GPT_5"),
+            system_instruction=system_prompt,
         ),
     )
 
-    tools = ToolsSchema(standard_tools=[submit_interview_result_function])
-
-
     context = LLMContext(
-        tools=tools,
-    ) 
+        tools=ToolsSchema(
+            standard_tools=[
+                SUBMIT_INTERVIEW_RESULT_SCHEMA,
+                PUBLISH_TEACHING_SNIPPET_SCHEMA,
+            ]
+        )
+    )
 
     llm.register_function(
         "submit_interview_result",
-        submit_interview_result,
-        cancel_on_interruption=False,  # usually you want this to finish even if user speaks
+        _submit_tool_handler,
+        cancel_on_interruption=False,
         timeout_secs=60,
     )
-    
+
+    llm.register_function(
+        "publish_teaching_snippet",
+        _publish_teaching_snippet_handler,
+        cancel_on_interruption=False,
+        timeout_secs=10,
+    )
+
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
         context,
         user_params=LLMUserAggregatorParams(vad_analyzer=SileroVADAnalyzer()),
     )
 
-    pipeline = Pipeline(
-        [
-            transport.input(),  # Transport user input
-            stt,
-            user_aggregator,  # User responses
-            llm,  # LLM
-            tts,  # TTS
-            transport.output(),  # Transport bot output
-            assistant_aggregator,  # Assistant spoken responses
-        ]
-    )
+    pipeline = Pipeline([
+        transport.input(),
+        stt,
+        user_aggregator,
+        llm,
+        tts,
+        transport.output(),
+        assistant_aggregator,
+    ])
 
     task = PipelineTask(
         pipeline,
@@ -314,45 +302,37 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         ),
     )
 
+    with _active_task_lock:
+        global _active_task, _active_context
+        _active_task = task
+        _active_context = context
+
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
-        logger.info(f"Client connected")
-        # Kick off the conversation.
-        context.add_message(
-            {"role": "user", "content": "Say hello and briefly introduce yourself."}
-        )
+        logger.info("Client connected")
+        context.add_message({"role": "user", "content": SESSION_START_MESSAGE})
         await task.queue_frames([LLMRunFrame()])
 
     @transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client):
-        logger.info(f"Client disconnected")
+        logger.info("Client disconnected")
         await task.cancel()
 
-    runner = PipelineRunner(handle_sigint=runner_args.handle_sigint)
-
-    await runner.run(task)
+    await PipelineRunner(handle_sigint=runner_args.handle_sigint).run(task)
 
 
 async def bot(runner_args: RunnerArguments):
-    """Main bot entry point for the bot starter."""
-
-    transport_params = {
-        # "daily": lambda: DailyParams(
-        #     audio_in_enabled=True,
-        #     audio_out_enabled=True,
-        # ),
-        "webrtc": lambda: TransportParams(
-            audio_in_enabled=True,
-            audio_out_enabled=True,
-        ),
-    }
-
-    transport = await create_transport(runner_args, transport_params)
-
+    transport = await create_transport(runner_args, {
+        "webrtc": lambda: TransportParams(audio_in_enabled=True, audio_out_enabled=True),
+    })
     await run_bot(transport, runner_args)
 
 
 if __name__ == "__main__":
     from pipecat.runner.run import main
+
+    bot_port = os.getenv("BOT_PORT")
+    if bot_port and "--port" not in sys.argv:
+        sys.argv += ["--port", bot_port]
 
     main()
